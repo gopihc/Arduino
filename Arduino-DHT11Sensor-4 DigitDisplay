@@ -1,0 +1,91 @@
+#include <DHT.h>
+
+/* Define shift register pins used for seven segment display */
+#define LATCH_DIO 4
+#define CLK_DIO 7
+#define DATA_DIO 8
+#define DHTPIN 5
+#define DHTTYPE DHT11
+unsigned long previousMillis = 0;
+const unsigned long interval = 1000;
+
+/* Segment byte maps for numbers 0 to 9 */
+const byte SEGMENT_MAP[] = {0xC0, 0xF9, 0xA4, 0xB0, 0x99, 0x92, 0x82, 0xF8, 0X80, 0X90};
+/* Byte maps to select digit 1 to 4 */
+const byte SEGMENT_SELECT[] = {0xF1, 0xF2, 0xF4, 0xF8};
+
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+    Serial.begin(9600);
+    dht.begin();
+
+    /* Set DIO pins to outputs */
+    pinMode(LATCH_DIO, OUTPUT);
+    pinMode(CLK_DIO, OUTPUT);
+    pinMode(DATA_DIO, OUTPUT);
+}
+
+void loop() {
+      unsigned long currentMillis = millis();
+
+    float temperature = round(dht.readTemperature()); // Round temperature to nearest integer
+    float humidity = round(dht.readHumidity()); // Round humidity to nearest integer
+    if (currentMillis - previousMillis < 1000) {
+
+    // Display temperature on the 4-digit display
+    displayTemperature(temperature);
+    }
+    else if (currentMillis - previousMillis < 2000) {
+        displayClock();
+    }
+    // Reset timer after both displays are shown for 10 seconds each
+    else {
+        previousMillis = currentMillis;
+    }
+
+
+
+
+
+}
+
+void displayTemperature(float temperature) {
+    int tempTens = int(temperature) / 10;
+    int tempUnits = int(temperature) % 10;
+
+    // Display temperature on the 4-digit display
+    WriteNumberToSegment(0, tempTens);
+    WriteNumberToSegment(1, tempUnits);
+    WriteNumberToSegment(2, 0); // Display "0" for the clock
+    WriteNumberToSegment(3, 0); // Display "0" for the clock
+    
+}
+
+void displayClock() {
+    // Display clock on the 4-digit display  // passiing 0 values as i dont have rtc module
+    WriteNumberToSegment(0, 0); // Display "1" for the clock
+    WriteNumberToSegment(1, 0); // Display "2" for the clock
+    WriteNumberToSegment(2, 0); // Display "3" for the clock
+    WriteNumberToSegment(3, 0); // Display "4" for the clock
+    
+}
+
+void displayHumidity(float humidity) {
+    int humTens = int(humidity) / 10;
+    int humUnits = int(humidity) % 10;
+
+    // Display humidity on the 4-digit display
+    WriteNumberToSegment(0, humTens);
+    WriteNumberToSegment(1, humUnits);
+    WriteNumberToSegment(2, 0); // Display "0" for the clock
+    WriteNumberToSegment(3, 0); // Display "0" for the clock
+}
+
+/* Write a decimal number between 0 and 9 to one of the 4 digits of the display */
+void WriteNumberToSegment(byte Segment, byte Value) {
+    digitalWrite(LATCH_DIO, LOW);
+    shiftOut(DATA_DIO, CLK_DIO, MSBFIRST, SEGMENT_MAP[Value]);
+    shiftOut(DATA_DIO, CLK_DIO, MSBFIRST, SEGMENT_SELECT[Segment]);
+    digitalWrite(LATCH_DIO, HIGH);
+}
